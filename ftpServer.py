@@ -36,7 +36,17 @@ import webbrowser
 
 # GUI相关导入
 import tkinter as tk
-from tkinter import ttk, scrolledtext, filedialog, messagebox, font
+from tkinter import scrolledtext, filedialog, messagebox, font
+
+# 尝试导入 ttkbootstrap 用于主题美化，优先替换标准 ttk
+try:
+    import ttkbootstrap as ttk
+    HAS_TTKBOOTSTRAP = True
+    THEME_NAME = "cosmo"
+except ImportError:
+    from tkinter import ttk
+    HAS_TTKBOOTSTRAP = False
+    THEME_NAME = None
 
 # 第三方库导入
 import pystray
@@ -56,7 +66,7 @@ from mypyftpdlib.handlers import FTPHandler, TLS_FTPHandler
 from mypyftpdlib.servers import ThreadedFTPServer
 
 appLabel = "FTP文件服务器"
-appVersion = "v1.27"
+appVersion = "v1.27_mod"
 appAuthor = "JARK006"
 githubLink = "https://github.com/jark006/FtpServer"
 releaseLink = "https://github.com/jark006/FtpServer/releases"
@@ -67,6 +77,10 @@ windowsTitle = f"{appLabel} {appVersion}"
 logMsg = queue.Queue()
 isLogThreadRunning: bool = True
 logMsgBackup: list[str] = []
+
+# 启动/停止按钮状态管理
+startButton = None  # 启动按钮
+stopButton = None   # 停止按钮
 
 permReadOnly: str = UserList.PERM_READ_ONLY
 permReadWrite: str = UserList.PERM_READ_WRITE
@@ -470,6 +484,7 @@ def startServer():
         logger.info(f"编码: {'GBK' if settings.isGBK else 'UTF-8'}\n")
 
     setConfigWidgetsState(tk.DISABLED)
+    update_button_state()
 
 
 def create_server_handler(
@@ -554,6 +569,7 @@ def stopServer():
         logger.info("IPv6服务线程已停止")
 
     setConfigWidgetsState(tk.NORMAL)
+    update_button_state()
 
 
 def setConfigWidgetsState(state: str):
@@ -565,6 +581,26 @@ def setConfigWidgetsState(state: str):
         directoryCombobox, pickDirButton, deleteDirButton,
     ):
         w.configure(state=state)
+
+
+def update_button_state():
+    """
+    根据 FTP 服务器运行状态更新启动/停止按钮的启用/禁用状态
+    """
+    global startButton
+    global stopButton
+    global isIPv4ThreadRunning
+    global isIPv6ThreadRunning
+
+    # 判断服务是否运行
+    is_running = isIPv4ThreadRunning.is_set() or isIPv6ThreadRunning.is_set()
+
+    if is_running:
+        startButton.configure(state=tk.DISABLED)
+        stopButton.configure(state=tk.NORMAL)
+    else:
+        startButton.configure(state=tk.NORMAL)
+        stopButton.configure(state=tk.DISABLED)
 
 
 def pickDirectory():
@@ -936,6 +972,8 @@ def main():
     global permReadOnlyRadio
     global isIPv4Supported
     global isIPv6Supported
+    global startButton
+    global stopButton
 
     global userNameVar
     global userPasswordVar
@@ -947,6 +985,15 @@ def main():
     global isPasswordModified
     global mutex_handle
     global logger
+
+    # 日志配置 - 必须在 check_single_instance() 之前初始化
+    logger = logging.getLogger("ftpserver")
+    logger.setLevel(logging.INFO)
+    _handler = logging.StreamHandler()
+    _handler.setFormatter(
+        logging.Formatter("[%(levelname)1.1s %(asctime)s] %(message)s", datefmt="%H:%M:%S")
+    )
+    logger.addHandler(_handler)
 
     # 检查单实例
     is_first_instance, mutex_handle = check_single_instance()
@@ -961,25 +1008,29 @@ def main():
     logThread = threading.Thread(target=logThreadFun)
     logThread.start()
 
-    # 日志配置
-    logger = logging.getLogger("ftpserver")
-    logger.setLevel(logging.INFO)
-    _handler = logging.StreamHandler()
-    _handler.setFormatter(
-        logging.Formatter("[%(levelname)1.1s %(asctime)s] %(message)s", datefmt="%H:%M:%S")
-    )
-    logger.addHandler(_handler)
-
-    mainWindow = tk.Tk()  # 实例化tk对象
+    # 创建主窗口
+    mainWindow = tk.Tk()
+    
     scaleFactor = int(mainWindow.tk.call("tk", "scaling") * 75)
     uiFont = font.Font(
         family="Microsoft YaHei", size=font.nametofont("TkTextFont").cget("size")
     )
-    style = ttk.Style(mainWindow)
+    # 应用 ttk 样式
+    global HAS_TTKBOOTSTRAP
+    if HAS_TTKBOOTSTRAP:
+        try:
+            logger.info("应用 ttkbootstrap cosmo 主题...")
+            style = ttk.Style(theme=THEME_NAME)
+        except Exception as e:
+            logger.warning(f"ttkbootstrap 主题应用失败: {e}，回退到标准 ttk")
+            HAS_TTKBOOTSTRAP = False
+            style = ttk.Style(mainWindow)
+    else:
+        style = ttk.Style(mainWindow)
     style.configure("TButton", width=-5, padding=(scale(8), scale(2)))
     style.configure("TEntry", padding=(scale(2), scale(3)))
     style.configure("TCombobox", padding=(scale(2), scale(3)))
-    mainWindow.geometry(f"{scale(600)}x{scale(500)}")
+    mainWindow.geometry(f"{scale(650)}x{scale(500)}")
     mainWindow.minsize(scale(600), scale(500))
 
     ftpIcon = myUtils.IconObj()  # 创建主窗口后才能初始化图标
@@ -1005,9 +1056,15 @@ def main():
     frame1 = ttk.Frame(mainWindow)
     frame1.pack(fill=tk.X, padx=scale(10), pady=(scale(10), scale(5)))
 
-    startButton = ttk.Button(frame1, text="开启", command=startServer)
+    _start_kwargs = {"text": "▶ 启动", "command": startServer}
+    _stop_kwargs = {"text": "■ 停止", "command": stopServer, "state": tk.DISABLED}
+    if HAS_TTKBOOTSTRAP:
+        _start_kwargs["bootstyle"] = "success"
+        _stop_kwargs["bootstyle"] = "danger"
+    startButton = ttk.Button(frame1, **_start_kwargs)
     startButton.pack(side=tk.LEFT, padx=(0, scale(10)))
-    ttk.Button(frame1, text="停止", command=stopServer).pack(
+    stopButton = ttk.Button(frame1, **_stop_kwargs)
+    stopButton.pack(
         side=tk.LEFT, padx=(0, scale(10))
     )
 
@@ -1143,6 +1200,7 @@ def main():
     if settings.isAutoStartServer:
         startButton.invoke()
         mainWindow.withdraw()
+        update_button_state()
 
     if os.path.exists(certFilePath) and os.path.exists(keyFilePath):
         logger.info("检测到 TLS/SSL 证书文件, 默认使用 FTPS [TLS/SSL显式加密]")

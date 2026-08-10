@@ -4,3 +4,4 @@ pystray
 pyopenssl
 pyasynchat
 windows-curses
+ttkbootstrap
