@@ -1,8 +1,8 @@
-# 🖥️ FTP文件服务器
+# 🖥️ FTP文件服务器 Fluent UI
 
-[![Version](https://img.shields.io/github/v/release/jark006/ftpServer)](https://github.com/jark006/FtpServer/releases/latest) ![Download](https://img.shields.io/github/downloads/jark006/FtpServer/total) [![Stars](https://img.shields.io/github/stars/jark006/ftpServer)](https://github.com/jark006/FtpServer/stargazers) [![License](https://img.shields.io/github/license/jark006/ftpServer)](https://github.com/jark006/FtpServer/blob/main/LICENSE) ![Platform](https://img.shields.io/badge/OS-Windows%2010/11%2064%20bit-00adef.svg)
+[![Version](https://img.shields.io/github/v/release/ShoutBeast/FtpServer-Fluent-UI)](https://github.com/ShoutBeast/FtpServer-Fluent-UI/releases/latest) ![Download](https://img.shields.io/github/downloads/ShoutBeast/FtpServer-Fluent-UI/total) [![Stars](https://img.shields.io/github/stars/ShoutBeast/FtpServer-Fluent-UI)](https://github.com/ShoutBeast/FtpServer-Fluent-UI/stargazers) [![License](https://img.shields.io/github/license/ShoutBeast/FtpServer-Fluent-UI)](https://github.com/ShoutBeast/FtpServer-Fluent-UI/blob/main/LICENSE) ![Platform](https://img.shields.io/badge/OS-Windows%2010/11%2064%20bit-00adef.svg)
 
-一键开启FTP文件服务器，方便其他设备通过网络传输、管理文件，支持IPv4/IPv6、多用户、FTPS。
+FTP文件服务器Fluent Design UI版，一键开启FTP服务，方便其他设备通过网络传输、管理文件，支持IPv4/IPv6、多用户、FTPS。基于 [FtpServer](https://github.com/jark006/FtpServer) 改进UI。
 
 ![](preview.png)
 
